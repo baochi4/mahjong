@@ -2,9 +2,9 @@
 
 ## 1. 项目概述
 
-**文件**: `mahjong/mahjong_scoring.py`  
+**仓库**: https://github.com/baochi4/mahjong  
 **语言**: Python 3  
-**代码行数**: 692 行  
+**核心文件**: `app.py`（Web 服务）、`mahjong_scoring.py`（计算引擎）  
 **功能**: 根据役种、番数、符数、位次等计算日本麻将（日麻）点数
 
 ### 核心能力
@@ -25,52 +25,33 @@
 
 ## 2. 项目结构
 
+项目根目录（已推送到 GitHub：**https://github.com/baochi4/mahjong**）：
+
 ```
 mahjong/
-└── mahjong_scoring.py    # 主程序（单文件，692行）
+├── app.py                 # Flask Web 服务（API 路由 + 静态页面托管）
+├── mahjong_scoring.py     # 核心计算引擎（役种枚举 / 符数 / 点数 / 顺位马）
+├── static/
+│   └── index.html         # 单页前端（算点 / 役种算番 / 符数计算 / 训练出题）
+├── test_api.py            # 接口与规则校准测试（python3 test_api.py 全绿）
+├── run_demo.py            # 命令行演示脚本
+├── requirements.txt       # 依赖：flask, flask-cors
+├── Procfile               # Web 进程：python app.py
+├── runtime.txt            # Python 3.11
+├── render.yaml            # Render 云部署配置（自动识别）
+├── .gitignore
+└── README.md
 ```
 
-### 模块组成
+### 核心模块组成（mahjong_scoring.py）
 
-```
-mahjong_scoring.py
-├── 枚举定义 (L25-44)
-│   ├── Wind          - 风位（东/南/西/北）
-│   ├── WinType       - 和牌方式（自摸/荣和）
-│   └── PlayerPosition - 位次（1st~4th）
-│
-├── 役种定义 (L51-121)
-│   └── Yaku          - 役种枚举类（含番数、是否役满）
-│
-├── 满贯表 (L128-150)
-│   ├── MANGAN_TABLE  - 满贯及以上点数映射表
-│   └── get_mangan_base() - 查表获取基本点
-│
-├── 基本点计算 (L157-214)
-│   └── calculate_base_point() - 核心公式: 符×2^(番+2)，切上满贯
-│
-├── 支付点数计算 (L221-299)
-│   ├── ceil_to_100() - 向上取整到百位
-│   └── calculate_payment() - 亲家/子家 × 自摸/荣和 的4种支付方式
-│
-├── 符数计算 (L306-407)
-│   └── FuCalculator  - 符数计算器类
-│
-├── 顺位马计算 (L414-456)
-│   └── calculate_rank_bonus() - ウマ/オカ最终得点
-│
-├── 综合入口 (L463-514)
-│   └── calculate_score() - 综合点数计算（含打印）
-│
-├── 速查表 (L521-573)
-│   └── print_quick_reference() - 常见点数速查表
-│
-├── 交互模式 (L580-624)
-│   └── interactive_mode() - 命令行交互输入
-│
-└── 主函数 (L631-692)
-    └── main() - 演示+速查表+交互入口
-```
+- 枚举：`Wind` / `WinType` / `PlayerPosition` / `Yaku`（役种，含番数与役满标记）
+- 满贯表：`MANGAN_TABLE` + `get_mangan_base()`
+- 基本点：`calculate_base_point()`（符×2^(番+2)，切上满贯）
+- 支付点数：`calculate_payment()`（亲/子 × 自摸/荣和 四种支付）
+- 符数计算：`FuCalculator.calculate()`（底符 / 门清荣和+10 / 自摸+2 / 平和型自摸20符 / 副露荣和最低30符）
+- 顺位马：`calculate_rank_bonus()`（ウマ/オカ 最终得点）
+- 综合入口：`calculate_score()` / `calculate_from_yaku()`（役种复合 + 门清限定役不计 + 副露减番）
 
 ---
 
@@ -476,14 +457,15 @@ python3 app.py
 
 ### 部署到云平台（手机 / iOS 不依赖电脑访问）
 
-项目已配置为云部署就绪：`Procfile`、`runtime.txt`、`render.yaml` 均已就位，`app.py` 使用 `PORT` / `DEBUG` 环境变量。
+项目已上线代码仓库：**https://github.com/baochi4/mahjong**（main 分支，部署配置齐全）。
 
-**Render 一键部署步骤：**
-1. 将本目录推送到 GitHub 仓库。
-2. 打开 https://render.com → New → Web Service → 关联 GitHub 仓库。
-3. 配置：Environment `Python 3`，Build Command `pip install -r requirements.txt`，Start Command `python app.py`（已写入 `render.yaml`，自动识别）。
-4. 免费实例（Free）自动分配 `https://<服务名>.onrender.com`。
-5. iOS 手机用 Safari / Chrome 打开该网址即可使用全部功能（电脑可关机）。
+部署配置均已就位：`Procfile`、`runtime.txt`、`render.yaml`、`requirements.txt`，`app.py` 使用 `PORT` / `DEBUG` 环境变量自动适配 Render。
+
+**Render 部署步骤（约 2 分钟）：**
+1. 打开 https://render.com → 注册/登录（可用 GitHub 一键登录）。
+2. **New → Web Service** → Connect GitHub → 授权后选仓库 **`baochi4/mahjong`**。
+3. Render 自动读取 `render.yaml`（Python 3.11、Build `pip install -r requirements.txt`、Start `python app.py`、Free 计划、Health Check `/`），直接点 **Create Web Service**。
+4. 构建完成后分配 `https://mahjong-score.onrender.com`，iOS Safari 打开即用，电脑可关机。
 
 > 免费层有冷启动（约 15 分钟无访问后休眠），首次打开稍慢属正常；如需稳定常驻可升级付费计划。
 
