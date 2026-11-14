@@ -1,0 +1,1528 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>日麻点数计算器</title>
+    <style>
+        :root {
+            --primary: #e74c3c;
+            --primary-dark: #c0392b;
+            --primary-light: #ff6b6b;
+            --secondary: #2c3e50;
+            --accent: #f39c12;
+            --bg: #0f0f1a;
+            --bg-card: #1a1a2e;
+            --bg-card-hover: #222240;
+            --bg-input: #16213e;
+            --text: #e8e8e8;
+            --text-dim: #8892b0;
+            --text-bright: #ffffff;
+            --border: #2a2a4a;
+            --success: #2ecc71;
+            --warning: #f1c40f;
+            --dealer-color: #e74c3c;
+            --child-color: #3498db;
+            --shadow: 0 8px 32px rgba(0,0,0,0.3);
+            --radius: 12px;
+            --radius-sm: 8px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans SC', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* 背景装饰 */
+        body::before {
+            content: '';
+            position: fixed;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle at 30% 20%, rgba(231,76,60,0.06) 0%, transparent 50%),
+                        radial-gradient(circle at 70% 80%, rgba(52,152,219,0.06) 0%, transparent 50%),
+                        radial-gradient(circle at 50% 50%, rgba(243,156,18,0.03) 0%, transparent 70%);
+            z-index: -1;
+            animation: bgFloat 20s ease-in-out infinite;
+        }
+
+        @keyframes bgFloat {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            33% { transform: translate(2%, -1%) rotate(1deg); }
+            66% { transform: translate(-1%, 2%) rotate(-1deg); }
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            padding: 40px 20px 20px;
+            position: relative;
+        }
+
+        .header h1 {
+            font-size: 2.4rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary-light), var(--accent), var(--primary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: 2px;
+            margin-bottom: 8px;
+        }
+
+        .header .subtitle {
+            color: var(--text-dim);
+            font-size: 0.95rem;
+            letter-spacing: 4px;
+        }
+
+        /* 麻将牌装饰 */
+        .tile-deco {
+            display: inline-flex;
+            gap: 6px;
+            margin-top: 12px;
+        }
+        .tile-deco span {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 48px;
+            background: linear-gradient(145deg, #f8f8f8, #e0e0e0);
+            color: #333;
+            border-radius: 4px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.8);
+            animation: tileBounce 2s ease-in-out infinite;
+        }
+        .tile-deco span:nth-child(1) { color: var(--primary); animation-delay: 0s; }
+        .tile-deco span:nth-child(2) { color: var(--success); animation-delay: 0.15s; }
+        .tile-deco span:nth-child(3) { color: var(--child-color); animation-delay: 0.3s; }
+        .tile-deco span:nth-child(4) { color: var(--accent); animation-delay: 0.45s; }
+
+        @keyframes tileBounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-4px); }
+        }
+
+        /* Tab Navigation */
+        .tab-nav {
+            display: flex;
+            justify-content: center;
+            gap: 4px;
+            padding: 0 20px;
+            margin: 20px auto 0;
+            max-width: 600px;
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            padding: 4px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 12px 16px;
+            border: none;
+            background: transparent;
+            color: var(--text-dim);
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: var(--radius-sm);
+            transition: all 0.3s ease;
+            letter-spacing: 1px;
+        }
+
+        .tab-btn:hover {
+            color: var(--text);
+            background: rgba(255,255,255,0.05);
+        }
+
+        .tab-btn.active {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 4px 12px rgba(231,76,60,0.3);
+        }
+
+        /* Main Content */
+        .container {
+            max-width: 900px;
+            margin: 24px auto;
+            padding: 0 20px;
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.4s ease;
+        }
+
+        .tab-content.active { display: block; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Cards */
+        .card {
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            padding: 28px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            border-color: rgba(231,76,60,0.3);
+        }
+
+        .card-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card-title .icon {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+
+        /* Form Controls */
+        .form-row {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 18px;
+            align-items: flex-end;
+            flex-wrap: wrap;
+        }
+
+        .form-group {
+            flex: 1;
+            min-width: 140px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.85rem;
+            color: var(--text-dim);
+            margin-bottom: 6px;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 10px 14px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text-bright);
+            font-size: 1rem;
+            transition: all 0.2s ease;
+            outline: none;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(231,76,60,0.15);
+        }
+
+        .form-group select {
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238892b0' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            padding-right: 32px;
+        }
+
+        /* Toggle Buttons */
+        .toggle-group {
+            display: flex;
+            gap: 0;
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+
+        .toggle-btn {
+            flex: 1;
+            padding: 10px 16px;
+            border: none;
+            background: var(--bg-input);
+            color: var(--text-dim);
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+        }
+
+        .toggle-btn:not(:last-child) {
+            border-right: 1px solid var(--border);
+        }
+
+        .toggle-btn.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .toggle-btn:hover:not(.active) {
+            background: var(--bg-card-hover);
+            color: var(--text);
+        }
+
+        /* Calculate Button */
+        .btn-calculate {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: var(--radius-sm);
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            font-size: 1.05rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            letter-spacing: 2px;
+            margin-top: 8px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-calculate::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .btn-calculate:hover::before { left: 100%; }
+
+        .btn-calculate:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(231,76,60,0.4);
+        }
+
+        .btn-calculate:active {
+            transform: translateY(0);
+        }
+
+        /* Result Display */
+        .result-area {
+            margin-top: 24px;
+            display: none;
+        }
+
+        .result-area.show {
+            display: block;
+            animation: resultPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes resultPop {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .result-header {
+            text-align: center;
+            padding: 20px;
+            background: linear-gradient(135deg, rgba(231,76,60,0.1), rgba(243,156,18,0.05));
+            border-radius: var(--radius);
+            margin-bottom: 16px;
+            border: 1px solid rgba(231,76,60,0.2);
+        }
+
+        .result-name {
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: var(--primary-light);
+            margin-bottom: 4px;
+        }
+
+        .result-base {
+            font-size: 0.9rem;
+            color: var(--text-dim);
+        }
+
+        .result-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+        }
+
+        .result-item {
+            background: var(--bg-input);
+            border-radius: var(--radius-sm);
+            padding: 16px;
+            text-align: center;
+            border: 1px solid var(--border);
+            transition: all 0.2s ease;
+        }
+
+        .result-item:hover {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+        }
+
+        .result-item.highlight {
+            background: linear-gradient(135deg, rgba(231,76,60,0.15), rgba(231,76,60,0.05));
+            border-color: var(--primary);
+        }
+
+        .result-item .label {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            margin-bottom: 6px;
+            letter-spacing: 1px;
+        }
+
+        .result-item .value {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--text-bright);
+        }
+
+        .result-item.highlight .value {
+            color: var(--primary-light);
+        }
+
+        .result-item .unit {
+            font-size: 0.85rem;
+            color: var(--text-dim);
+            margin-left: 2px;
+        }
+
+        /* Description list */
+        .desc-list {
+            margin-top: 16px;
+            padding: 16px;
+            background: var(--bg-input);
+            border-radius: var(--radius-sm);
+            border-left: 3px solid var(--accent);
+        }
+
+        .desc-list p {
+            font-size: 0.95rem;
+            line-height: 1.8;
+            color: var(--text);
+        }
+
+        /* Quick Reference Table */
+        .ref-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            font-size: 0.88rem;
+        }
+
+        .ref-table thead th {
+            background: var(--bg-input);
+            color: var(--text-dim);
+            padding: 12px 8px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 0.8rem;
+            letter-spacing: 0.5px;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+
+        .ref-table thead th:first-child { border-radius: var(--radius-sm) 0 0 0; }
+        .ref-table thead th:last-child { border-radius: 0 var(--radius-sm) 0 0; }
+
+        .ref-table tbody td {
+            padding: 10px 8px;
+            text-align: center;
+            border-bottom: 1px solid var(--border);
+            transition: background 0.2s;
+        }
+
+        .ref-table tbody tr:hover td {
+            background: rgba(231,76,60,0.05);
+        }
+
+        .ref-table tbody tr:last-child td:first-child { border-radius: 0 0 0 var(--radius-sm); }
+        .ref-table tbody tr:last-child td:last-child { border-radius: 0 0 var(--radius-sm) 0; }
+
+        .ref-table .han-fu {
+            color: var(--accent);
+            font-weight: 700;
+        }
+
+        .ref-table .mangan-row td {
+            background: rgba(231,76,60,0.03);
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+        }
+
+        /* Rank Bonus */
+        .rank-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .rank-card {
+            background: var(--bg-input);
+            border-radius: var(--radius-sm);
+            padding: 16px;
+            text-align: center;
+            border: 1px solid var(--border);
+            transition: all 0.3s ease;
+        }
+
+        .rank-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+        }
+
+        .rank-card .position {
+            font-size: 2rem;
+            font-weight: 800;
+            margin-bottom: 8px;
+        }
+
+        .rank-card:nth-child(1) .position { color: var(--accent); }
+        .rank-card:nth-child(2) .position { color: var(--text); }
+        .rank-card:nth-child(3) .position { color: var(--child-color); }
+        .rank-card:nth-child(4) .position { color: var(--text-dim); }
+
+        .rank-card .score {
+            font-size: 0.85rem;
+            color: var(--text-dim);
+            margin-bottom: 4px;
+        }
+
+        .rank-card .uma {
+            font-size: 0.85rem;
+            margin-bottom: 6px;
+        }
+
+        .rank-card .final {
+            font-size: 1.3rem;
+            font-weight: 700;
+        }
+
+        .positive { color: var(--success); }
+        .negative { color: var(--primary-light); }
+
+        /* Yaku List */
+        .yaku-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 8px;
+        }
+
+        .yaku-item {
+            background: var(--bg-input);
+            border-radius: var(--radius-sm);
+            padding: 10px 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid var(--border);
+            transition: all 0.2s;
+            cursor: default;
+        }
+
+        .yaku-item:hover {
+            border-color: var(--primary);
+            background: var(--bg-card-hover);
+        }
+
+        .yaku-item .yaku-name {
+            font-size: 0.9rem;
+            color: var(--text);
+        }
+
+        .yaku-item .yaku-han {
+            font-size: 0.8rem;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 4px;
+            background: rgba(231,76,60,0.15);
+            color: var(--primary-light);
+        }
+
+        .yaku-item.yakuman .yaku-han {
+            background: linear-gradient(135deg, rgba(243,156,18,0.2), rgba(231,76,60,0.2));
+            color: var(--accent);
+        }
+
+        /* Fu Calculator */
+        .fu-mianzi-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+            align-items: center;
+        }
+
+        .fu-mianzi-row select {
+            flex: 1;
+            padding: 8px 10px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text-bright);
+            font-size: 0.9rem;
+            outline: none;
+        }
+
+        .fu-mianzi-row select:focus {
+            border-color: var(--primary);
+        }
+
+        .btn-add-mianzi, .btn-remove-mianzi {
+            padding: 8px 12px;
+            border: none;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 700;
+            transition: all 0.2s;
+        }
+
+        .btn-add-mianzi {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-remove-mianzi {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-add-mianzi:hover { opacity: 0.85; }
+        .btn-remove-mianzi:hover { opacity: 0.85; }
+
+        .fu-result {
+            text-align: center;
+            padding: 20px;
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--accent);
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 30px 20px;
+            color: var(--text-dim);
+            font-size: 0.8rem;
+            letter-spacing: 1px;
+        }
+
+        /* Responsive */
+        @media (max-width: 640px) {
+            .header h1 { font-size: 1.8rem; }
+            .card { padding: 20px; }
+            .form-row { flex-direction: column; }
+            .form-group { min-width: 100%; }
+            .rank-grid { grid-template-columns: repeat(2, 1fr); }
+            .result-grid { grid-template-columns: 1fr; }
+            .tab-nav { flex-wrap: wrap; }
+            .tab-btn { font-size: 0.8rem; padding: 10px 6px; flex: 1 1 auto; min-width: 64px; }
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--primary); }
+
+    /* 役种复合判定 */
+    .yaku-check-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; }
+    .yaku-group { background: var(--bg-input); border-radius: var(--radius-sm); padding: 10px 12px; }
+    .yaku-group-title { font-size: 0.8rem; color: var(--accent); font-weight: 700; margin-bottom: 6px; letter-spacing: 1px; }
+    .yaku-check { display: flex; align-items: center; gap: 6px; font-size: 0.9rem; padding: 3px 0; cursor: pointer; }
+    .yaku-check input { accent-color: var(--primary); width: 16px; height: 16px; }
+    </style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+    <h1>🀄 日麻点数计算器</h1>
+    <p class="subtitle">MAHJONG SCORING CALCULATOR</p>
+    <div class="tile-deco">
+        <span>🀇</span>
+        <span>🀅</span>
+        <span>🀙</span>
+        <span>🀀</span>
+    </div>
+</div>
+
+<!-- Tab Navigation -->
+<div class="tab-nav">
+    <button class="tab-btn active" onclick="switchTab('calc')">点数计算</button>
+    <button class="tab-btn" onclick="switchTab('fu')">符数计算</button>
+    <button class="tab-btn" onclick="switchTab('rank')">顺位马</button>
+    <button class="tab-btn" onclick="switchTab('ref')">速查表</button>
+    <button class="tab-btn" onclick="switchTab('yaku')">役种一览</button>
+    <button class="tab-btn" onclick="switchTab('train')">训练</button>
+    <button class="tab-btn" onclick="switchTab('yakuscore')">役种算番</button>
+</div>
+
+<div class="container">
+
+    <!-- ==================== 点数计算 ==================== -->
+    <div id="tab-calc" class="tab-content active">
+        <div class="card">
+            <div class="card-title">
+                <div class="icon">🎯</div>
+                点数计算
+            </div>
+
+            <!-- 役满切换 -->
+            <div class="form-row">
+                <div class="form-group">
+                    <label>是否役满</label>
+                    <div class="toggle-group">
+                        <button class="toggle-btn active" id="yk-no" onclick="setYakuman(false)">普通</button>
+                        <button class="toggle-btn" id="yk-yes" onclick="setYakuman(true)">役满</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 番数/符数 -->
+            <div class="form-row">
+                <div class="form-group" id="han-group">
+                    <label>番数</label>
+                    <input type="number" id="han" value="3" min="1" max="99">
+                </div>
+                <div class="form-group" id="fu-group">
+                    <label>符数</label>
+                    <select id="fu">
+                        <option value="20">20符</option>
+                        <option value="25">25符</option>
+                        <option value="30" selected>30符</option>
+                        <option value="40">40符</option>
+                        <option value="50">50符</option>
+                        <option value="60">60符</option>
+                        <option value="70">70符</option>
+                        <option value="80">80符</option>
+                        <option value="90">90符</option>
+                        <option value="100">100符</option>
+                        <option value="110">110符</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- 役满倍数 -->
+            <div class="form-row" id="yakuman-row" style="display:none">
+                <div class="form-group">
+                    <label>役满倍数</label>
+                    <select id="yakuman-count">
+                        <option value="1">单倍役满</option>
+                        <option value="2">双倍役满</option>
+                        <option value="3">三倍役满</option>
+                        <option value="4">四倍役满</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- 亲家/子家 + 自摸/荣和 + 门清/副露 -->
+            <div class="form-row">
+                <div class="form-group">
+                    <label>角色</label>
+                    <div class="toggle-group">
+                        <button class="toggle-btn active" id="role-child" onclick="setRole(false)">子家</button>
+                        <button class="toggle-btn" id="role-dealer" onclick="setRole(true)">亲家</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>和牌方式</label>
+                    <div class="toggle-group">
+                        <button class="toggle-btn" id="win-tsumo" onclick="setWinType('tsumo')">自摸</button>
+                        <button class="toggle-btn active" id="win-ron" onclick="setWinType('ron')">荣和</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>门清/副露</label>
+                    <div class="toggle-group">
+                        <button class="toggle-btn active" id="menzen-yes" onclick="setMenzen(true)">门清</button>
+                        <button class="toggle-btn" id="menzen-no" onclick="setMenzen(false)">副露</button>
+                    </div>
+                </div>
+            </div>
+            <p style="color:var(--text-dim); font-size:0.82rem; margin-top:-2px">副露时请在上方「番数」中按规则扣除对应役种（副露减番的自动计算请见「役种算番」页）</p>
+
+            <button class="btn-calculate" onclick="doCalculate()">🎲 计 算 点 数</button>
+
+            <!-- 结果区域 -->
+            <div class="result-area" id="calc-result"></div>
+        </div>
+    </div>
+
+    <!-- ==================== 符数计算 ==================== -->
+    <div id="tab-fu" class="tab-content">
+        <div class="card">
+            <div class="card-title">
+                <div class="icon">🔧</div>
+                符数计算
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>和牌方式</label>
+                    <div class="toggle-group">
+                        <button class="toggle-btn" id="fu-win-tsumo" onclick="setFuWinType('tsumo')">自摸</button>
+                        <button class="toggle-btn active" id="fu-win-ron" onclick="setFuWinType('ron')">荣和</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>门前清</label>
+                    <div class="toggle-group">
+                        <button class="toggle-btn active" id="fu-menzen-yes" onclick="setFuMenzen(true)">门前</button>
+                        <button class="toggle-btn" id="fu-menzen-no" onclick="setFuMenzen(false)">副露</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>听牌型</label>
+                    <select id="fu-wait">
+                        <option value="ryanmen">两面听 (0符)</option>
+                        <option value="kanchan">嵌张听 (2符)</option>
+                        <option value="penchan">边张听 (2符)</option>
+                        <option value="tanki">单骑听 (2符)</option>
+                        <option value="shanpon">双碰听 (0符)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>雀头类型</label>
+                    <select id="fu-pair">
+                        <option value="none">无役牌 (0符)</option>
+                        <option value="yakuhai">役牌 (2符)</option>
+                        <option value="sangen">三元牌 (2符)</option>
+                        <option value="jikaze">自风 (2符)</option>
+                        <option value="bakaze">场风 (2符)</option>
+                        <option value="jikaze_bakaze">连风牌 (4符)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- 面子列表 -->
+            <div class="form-group" style="margin-bottom:12px">
+                <label>面子/刻子/杠子</label>
+            </div>
+            <div id="fu-mianzi-list"></div>
+            <button class="btn-add-mianzi" onclick="addMianzi()" style="margin-bottom:16px">+ 添加面子</button>
+
+            <button class="btn-calculate" onclick="doFuCalculate()">🔧 计 算 符 数</button>
+
+            <div class="result-area" id="fu-result"></div>
+        </div>
+    </div>
+
+    <!-- ==================== 顺位马 ==================== -->
+    <div id="tab-rank" class="tab-content">
+        <div class="card">
+            <div class="card-title">
+                <div class="icon">🏆</div>
+                顺位马计算
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>1位得点</label>
+                    <input type="number" id="rank-s1" value="45000" step="1000">
+                </div>
+                <div class="form-group">
+                    <label>2位得点</label>
+                    <input type="number" id="rank-s2" value="30000" step="1000">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>3位得点</label>
+                    <input type="number" id="rank-s3" value="20000" step="1000">
+                </div>
+                <div class="form-group">
+                    <label>4位得点</label>
+                    <input type="number" id="rank-s4" value="5000" step="1000">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>顺位马 (逗号分隔)</label>
+                    <input type="text" id="rank-uma" value="20,10,-10,-20">
+                </div>
+                <div class="form-group">
+                    <label>一位赏 (オカ)</label>
+                    <input type="number" id="rank-oka" value="20000" step="1000">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>返点</label>
+                    <input type="number" id="rank-return" value="30000" step="1000">
+                </div>
+            </div>
+
+            <button class="btn-calculate" onclick="doRankCalculate()">🏆 计 算 顺 位 马</button>
+
+            <div class="result-area" id="rank-result"></div>
+        </div>
+    </div>
+
+    <!-- ==================== 速查表 ==================== -->
+    <div id="tab-ref" class="tab-content">
+        <div class="card">
+            <div class="card-title">
+                <div class="icon">📋</div>
+                点数速查表
+            </div>
+            <div class="table-wrapper">
+                <table class="ref-table" id="ref-table">
+                    <thead>
+                        <tr>
+                            <th>番·符</th>
+                            <th>子家荣和</th>
+                            <th>子家自摸<br><small>亲/子</small></th>
+                            <th>亲家荣和</th>
+                            <th>亲家自摸<br><small>-/子</small></th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== 役种一览 ==================== -->
+    <div id="tab-yaku" class="tab-content">
+        <div class="card">
+            <div class="card-title">
+                <div class="icon">🐉</div>
+                役种一览
+            </div>
+            <div class="yaku-grid" id="yaku-grid"></div>
+        </div>
+    </div>
+
+    <!-- ==================== 训练 ==================== -->
+    <div id="tab-train" class="tab-content">
+        <div class="card">
+            <div class="card-title">
+                <div class="icon">🎯</div>
+                点数计算训练
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>难度</label>
+                    <div class="toggle-group">
+                        <button class="toggle-btn active" id="train-basic" onclick="setTrainDiff('basic')">基础</button>
+                        <button class="toggle-btn" id="train-advanced" onclick="setTrainDiff('advanced')">进阶</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <button class="btn-calculate" style="margin-top:22px" onclick="newTrainQuestion()">🎲 出 题</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card" id="train-question-card" style="display:none">
+            <div class="result-header" id="train-question-text"></div>
+            <div id="train-inputs"></div>
+            <button class="btn-calculate" onclick="submitTrainAnswer()">✔ 提 交 答 案</button>
+            <div class="result-area" id="train-result"></div>
+            <div style="margin-top:16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px">
+                <div id="train-stats" style="color:var(--text-dim); font-size:0.95rem"></div>
+                <button class="btn-calculate" style="width:auto; padding:10px 24px; margin:0" onclick="newTrainQuestion()">下一题 →</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== 役种算番 ==================== -->
+    <div id="tab-yakuscore" class="tab-content">
+        <div class="card">
+            <div class="card-title">
+                <div class="icon">🀄</div>
+                役种复合算番
+            </div>
+
+            <div id="yaku-checkboxes" class="yaku-check-grid"></div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>表宝牌</label>
+                    <input type="number" id="yaku-dora" value="0" min="0">
+                </div>
+                <div class="form-group">
+                    <label>里宝牌</label>
+                    <input type="number" id="yaku-ura" value="0" min="0">
+                </div>
+                <div class="form-group">
+                    <label>符数</label>
+                    <input type="number" id="yaku-fu" value="20" min="20">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>身份</label>
+                    <div class="toggle-group" id="yaku-role-group">
+                        <button class="toggle-btn active" onclick="toggleGroup('yaku-role-group','yaku-dealer')">亲家</button>
+                        <button class="toggle-btn" onclick="toggleGroup('yaku-role-group','yaku-child')">子家</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>和牌方式</label>
+                    <div class="toggle-group" id="yaku-wt-group">
+                        <button class="toggle-btn active" onclick="toggleGroup('yaku-wt-group','yaku-ron')">荣和</button>
+                        <button class="toggle-btn" onclick="toggleGroup('yaku-wt-group','yaku-tsumo')">自摸</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>门清/副露</label>
+                    <div class="toggle-group" id="yaku-menzen-group">
+                        <button class="toggle-btn active" onclick="toggleGroup('yaku-menzen-group','yaku-menzen')">门清</button>
+                        <button class="toggle-btn" onclick="toggleGroup('yaku-menzen-group','yaku-fulou')">副露</button>
+                    </div>
+                </div>
+            </div>
+
+            <button class="btn-calculate" onclick="submitYakuScore()">🧮 计 算 点 数</button>
+            <div class="result-area" id="yaku-score-result"></div>
+        </div>
+    </div>
+
+</div>
+
+<div class="footer">
+    日麻点数计算器 · Mahjong Scoring Calculator · 🀄
+</div>
+
+<script>
+// ========== State ==========
+let state = {
+    isYakuman: false,
+    isDealer: false,
+    winType: 'ron',
+    fuWinType: 'ron',
+    fuMenzen: true,
+    isMenzen: true,
+};
+
+const API = '/api';
+
+// ========== Tab Switching ==========
+function switchTab(name) {
+    document.querySelectorAll('.tab-btn').forEach((btn, i) => {
+        btn.classList.toggle('active', btn.textContent.includes(
+            {calc:'点数',fu:'符数',rank:'顺位',ref:'速查',yaku:'役种',train:'训练',yakuscore:'役种算番'}[name]
+        ));
+    });
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.add('active');
+
+    // Load data on first view
+    if (name === 'ref' && !document.getElementById('ref-table').dataset.loaded) loadRefTable();
+    if (name === 'yaku' && !document.getElementById('yaku-grid').dataset.loaded) loadYakuList();
+    if (name === 'train' && !trainState.question) newTrainQuestion();
+    if (name === 'yakuscore' && !document.getElementById('yaku-checkboxes').dataset.loaded) loadYakuCheckboxes();
+}
+
+// ========== Toggle Helpers ==========
+function setYakuman(v) {
+    state.isYakuman = v;
+    document.getElementById('yk-no').classList.toggle('active', !v);
+    document.getElementById('yk-yes').classList.toggle('active', v);
+    document.getElementById('yakuman-row').style.display = v ? 'flex' : 'none';
+    document.getElementById('fu-group').style.display = v ? 'none' : 'block';
+}
+
+function setRole(v) {
+    state.isDealer = v;
+    document.getElementById('role-child').classList.toggle('active', !v);
+    document.getElementById('role-dealer').classList.toggle('active', v);
+}
+
+function setWinType(v) {
+    state.winType = v;
+    document.getElementById('win-tsumo').classList.toggle('active', v === 'tsumo');
+    document.getElementById('win-ron').classList.toggle('active', v === 'ron');
+}
+
+function setMenzen(v) {
+    state.isMenzen = v;
+    document.getElementById('menzen-yes').classList.toggle('active', v);
+    document.getElementById('menzen-no').classList.toggle('active', !v);
+}
+
+function setFuWinType(v) {
+    state.fuWinType = v;
+    document.getElementById('fu-win-tsumo').classList.toggle('active', v === 'tsumo');
+    document.getElementById('fu-win-ron').classList.toggle('active', v === 'ron');
+}
+
+function setFuMenzen(v) {
+    state.fuMenzen = v;
+    document.getElementById('fu-menzen-yes').classList.toggle('active', v);
+    document.getElementById('fu-menzen-no').classList.toggle('active', !v);
+}
+
+// ========== API Calls ==========
+async function apiCall(endpoint, data) {
+    const resp = await fetch(API + endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    });
+    return resp.json();
+}
+
+// ========== Point Calculation ==========
+async function doCalculate() {
+    const han = parseInt(document.getElementById('han').value);
+    const fu = state.isYakuman ? 0 : parseInt(document.getElementById('fu').value);
+    const yakumanCount = state.isYakuman ? parseInt(document.getElementById('yakuman-count').value) : 0;
+
+    const res = await apiCall('/calculate', {
+        han, fu,
+        is_dealer: state.isDealer,
+        win_type: state.winType,
+        is_yakuman: state.isYakuman,
+        yakuman_count: yakumanCount,
+        is_menzen: state.isMenzen,
+    });
+
+    if (!res.success) {
+        alert('计算错误: ' + res.error);
+        return;
+    }
+
+    const r = res.result;
+    const inp = res.input;
+    let html = '';
+
+    // Header
+    html += '<div class="result-header">';
+    html += `<div class="result-name">${r.name}</div>`;
+    html += `<div class="result-base">基本点: ${r.base.toLocaleString()} · ${state.isMenzen ? '门清' : '副露'}</div>`;
+    html += '</div>';
+
+    // Grid
+    html += '<div class="result-grid">';
+    if (inp.win_type === '荣和') {
+        html += `<div class="result-item highlight">
+            <div class="label">放铳者支付</div>
+            <div class="value">${r.ron_payment.toLocaleString()}<span class="unit">点</span></div>
+        </div>`;
+    } else {
+        if (inp.is_dealer) {
+            html += `<div class="result-item highlight">
+                <div class="label">子家每人支付</div>
+                <div class="value">${r.child_payment.toLocaleString()}<span class="unit">点</span></div>
+            </div>`;
+        } else {
+            html += `<div class="result-item">
+                <div class="label">亲家支付</div>
+                <div class="value">${r.dealer_payment.toLocaleString()}<span class="unit">点</span></div>
+            </div>`;
+            html += `<div class="result-item">
+                <div class="label">子家每人支付</div>
+                <div class="value">${r.child_payment.toLocaleString()}<span class="unit">点</span></div>
+            </div>`;
+        }
+    }
+    html += `<div class="result-item highlight">
+        <div class="label">总计获得</div>
+        <div class="value">${r.total.toLocaleString()}<span class="unit">点</span></div>
+    </div>`;
+    html += '</div>';
+
+    // Description
+    html += '<div class="desc-list">';
+    res.descriptions.forEach(d => { html += `<p>▸ ${d}</p>`; });
+    html += '</div>';
+
+    const el = document.getElementById('calc-result');
+    el.innerHTML = html;
+    el.classList.remove('show');
+    void el.offsetWidth;
+    el.classList.add('show');
+}
+
+// ========== Fu Calculation ==========
+let mianziCount = 0;
+
+function addMianzi() {
+    mianziCount++;
+    const id = mianziCount;
+    const list = document.getElementById('fu-mianzi-list');
+    const row = document.createElement('div');
+    row.className = 'fu-mianzi-row';
+    row.id = 'mianzi-' + id;
+    row.innerHTML = `
+        <select id="mz-type-${id}">
+            <option value="shuntsu">顺子 (0符)</option>
+            <option value="koutsu">刻子</option>
+            <option value="kantsu">杠子</option>
+        </select>
+        <select id="mz-yaochu-${id}">
+            <option value="false">中张牌</option>
+            <option value="true">幺九牌</option>
+        </select>
+        <select id="mz-ankan-${id}">
+            <option value="false">明刻/明杠</option>
+            <option value="true">暗刻/暗杠</option>
+        </select>
+        <button class="btn-remove-mianzi" onclick="removeMianzi(${id})">✕</button>
+    `;
+    list.appendChild(row);
+}
+
+function removeMianzi(id) {
+    const el = document.getElementById('mianzi-' + id);
+    if (el) el.remove();
+}
+
+function getMianziList() {
+    const items = [];
+    document.querySelectorAll('.fu-mianzi-row').forEach(row => {
+        const id = row.id.replace('mianzi-', '');
+        items.push({
+            type: document.getElementById('mz-type-' + id).value,
+            is_yaochu: document.getElementById('mz-yaochu-' + id).value === 'true',
+            is_ankan: document.getElementById('mz-ankan-' + id).value === 'true',
+        });
+    });
+    return items;
+}
+
+async function doFuCalculate() {
+    const res = await apiCall('/fu_calculate', {
+        win_type: state.fuWinType,
+        is_menzen: state.fuMenzen,
+        wait_type: document.getElementById('fu-wait').value,
+        pair_type: document.getElementById('fu-pair').value,
+        mianzi: getMianziList(),
+    });
+
+    if (!res.success) {
+        alert('计算错误: ' + res.error);
+        return;
+    }
+
+    const el = document.getElementById('fu-result');
+    el.innerHTML = `<div class="fu-result">符数: ${res.fu} 符</div>`;
+    el.classList.remove('show');
+    void el.offsetWidth;
+    el.classList.add('show');
+}
+
+// ========== Rank Bonus ==========
+async function doRankCalculate() {
+    const scores = [
+        parseInt(document.getElementById('rank-s1').value),
+        parseInt(document.getElementById('rank-s2').value),
+        parseInt(document.getElementById('rank-s3').value),
+        parseInt(document.getElementById('rank-s4').value),
+    ];
+    const uma = document.getElementById('rank-uma').value.split(',').map(Number);
+    const oka = parseInt(document.getElementById('rank-oka').value);
+    const returnPoint = parseInt(document.getElementById('rank-return').value);
+
+    const res = await apiCall('/rank_bonus', { scores, uma, oka, return_point: returnPoint });
+
+    if (!res.success) {
+        alert('计算错误: ' + res.error);
+        return;
+    }
+
+    let html = '<div class="rank-grid">';
+    res.results.forEach(r => {
+        const posClass = r.position <= 2 ? 'positive' : 'negative';
+        const finalClass = r.final >= 0 ? 'positive' : 'negative';
+        html += `<div class="rank-card">
+            <div class="position">${r.position}位</div>
+            <div class="score">得点: ${r.score.toLocaleString()}</div>
+            <div class="uma ${posClass}">马: ${r.uma_bonus >= 0 ? '+' : ''}${r.uma_bonus.toLocaleString()}</div>
+            <div class="final ${finalClass}">${r.final >= 0 ? '+' : ''}${r.final.toLocaleString()}</div>
+        </div>`;
+    });
+    html += '</div>';
+
+    const el = document.getElementById('rank-result');
+    el.innerHTML = html;
+    el.classList.remove('show');
+    void el.offsetWidth;
+    el.classList.add('show');
+}
+
+// ========== Quick Reference ==========
+async function loadRefTable() {
+    const resp = await fetch(API + '/quick_reference');
+    const data = await resp.json();
+    if (!data.success) return;
+
+    const tbody = document.querySelector('#ref-table tbody');
+    let html = '';
+    data.table.forEach(row => {
+        const isMangan = row.han >= 5 ? 'mangan-row' : '';
+        html += `<tr class="${isMangan}">
+            <td class="han-fu">${row.label}</td>
+            <td>${row.child_ron.toLocaleString()}</td>
+            <td>${row.child_tsumo_dealer.toLocaleString()}/${row.child_tsumo_child.toLocaleString()}</td>
+            <td>${row.dealer_ron.toLocaleString()}</td>
+            <td>-/${row.dealer_tsumo_child.toLocaleString()}</td>
+        </tr>`;
+    });
+    tbody.innerHTML = html;
+    document.getElementById('ref-table').dataset.loaded = '1';
+}
+
+// ========== Yaku List ==========
+async function loadYakuList() {
+    const resp = await fetch(API + '/yaku_list');
+    const data = await resp.json();
+    if (!data.success) return;
+
+    const grid = document.getElementById('yaku-grid');
+    let html = '';
+    data.yaku_list.forEach(y => {
+        const ykClass = y.is_yakuman ? 'yakuman' : '';
+        const hanText = y.is_yakuman ? '役满' : `${y.han}番`;
+        html += `<div class="yaku-item ${ykClass}">
+            <span class="yaku-name">${y.name}</span>
+            <span class="yaku-han">${hanText}</span>
+        </div>`;
+    });
+    grid.innerHTML = html;
+    document.getElementById('yaku-grid').dataset.loaded = '1';
+}
+
+// ========== Auto-calculate on Enter ==========
+document.getElementById('han').addEventListener('keydown', e => { if (e.key === 'Enter') doCalculate(); });
+
+// ========== Training ==========
+let trainState = { difficulty: 'basic', question: null, total: 0, streak: 0 };
+
+function setTrainDiff(d) {
+    trainState.difficulty = d;
+    document.getElementById('train-basic').classList.toggle('active', d === 'basic');
+    document.getElementById('train-advanced').classList.toggle('active', d === 'advanced');
+}
+
+async function newTrainQuestion() {
+    const res = await apiCall('/train/generate', { difficulty: trainState.difficulty });
+    if (!res.success) { alert('出题失败'); return; }
+    trainState.question = res.question;
+    renderTrainQuestion();
+}
+
+function renderTrainQuestion() {
+    const q = trainState.question;
+    const role = q.is_dealer ? '亲家' : '子家';
+    const wt = q.win_type === 'tsumo' ? '自摸' : '荣和';
+    const fuText = q.is_yakuman ? `役满×${q.yakuman_count}` : `${q.han}番${q.fu}符`;
+    document.getElementById('train-question-text').innerHTML =
+        `<div class="result-name">${fuText}</div><div class="result-base">${role} · ${wt}</div>`;
+    document.getElementById('train-question-card').style.display = 'block';
+
+    let html = '';
+    if (q.win_type === 'ron') {
+        html += trainField('放铳者支付', 'train-ans-ron');
+    } else if (q.is_dealer) {
+        html += trainField('子家每人支付', 'train-ans-child');
+    } else {
+        html += trainField('亲家支付', 'train-ans-dealer');
+        html += trainField('子家每人支付', 'train-ans-child');
+    }
+    document.getElementById('train-inputs').innerHTML = html;
+    const el = document.getElementById('train-result');
+    el.classList.remove('show');
+    el.innerHTML = '';
+}
+
+function trainField(label, id) {
+    return `<div class="form-group">
+        <label>${label}（点）</label>
+        <input type="number" id="${id}" placeholder="0" min="0">
+    </div>`;
+}
+
+async function submitTrainAnswer() {
+    const q = trainState.question;
+    const ans = await apiCall('/calculate', {
+        han: q.han, fu: q.fu, is_dealer: q.is_dealer,
+        win_type: q.win_type, is_yakuman: q.is_yakuman, yakuman_count: q.yakuman_count,
+    });
+    if (!ans.success) { alert('校验失败'); return; }
+    const r = ans.result;
+
+    let correct = true, allFilled = true, userHtml = '';
+    const checks = [];
+    if (q.win_type === 'ron') {
+        checks.push(['放铳者支付', 'train-ans-ron', r.ron_payment]);
+    } else if (q.is_dealer) {
+        checks.push(['子家每人支付', 'train-ans-child', r.child_payment]);
+    } else {
+        checks.push(['亲家支付', 'train-ans-dealer', r.dealer_payment]);
+        checks.push(['子家每人支付', 'train-ans-child', r.child_payment]);
+    }
+
+    for (const [label, id, val] of checks) {
+        const raw = (document.getElementById(id).value || '').trim().replace(/,/g, '');
+        if (raw === '') { allFilled = false; continue; }
+        const num = parseInt(raw, 10);
+        const ok = num === val;
+        if (!ok) correct = false;
+        userHtml += `<p>▸ ${label}: 你填 ${raw} ${ok ? '✅' : '❌ 应为 ' + val.toLocaleString()}</p>`;
+    }
+
+    trainState.total += 1;
+    if (correct && allFilled) trainState.streak += 1; else trainState.streak = 0;
+
+    let stdHtml = '<div class="result-grid">';
+    if (q.win_type === 'ron') {
+        stdHtml += trainItem('放铳者支付', r.ron_payment);
+    } else if (q.is_dealer) {
+        stdHtml += trainItem('子家每人支付', r.child_payment);
+    } else {
+        stdHtml += trainItem('亲家支付', r.dealer_payment);
+        stdHtml += trainItem('子家每人支付', r.child_payment);
+    }
+    stdHtml += trainItem('总计获得', r.total, true);
+    stdHtml += '</div>';
+
+    const verdict = (correct && allFilled)
+        ? '<div class="result-header" style="border-color:var(--success)"><div class="result-name" style="color:var(--success)">✅ 回答正确！</div></div>'
+        : '<div class="result-header" style="border-color:var(--primary-light)"><div class="result-name" style="color:var(--primary-light)">❌ 答错了</div></div>';
+
+    let desc = '<div class="desc-list">' + userHtml;
+    (ans.descriptions || []).forEach(d => desc += `<p>▸ ${d}</p>`);
+    desc += '</div>';
+
+    const el = document.getElementById('train-result');
+    el.innerHTML = verdict + stdHtml + desc;
+    el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
+    document.getElementById('train-stats').textContent = `连对 ${trainState.streak} · 总题 ${trainState.total}`;
+}
+
+function trainItem(label, val, highlight) {
+    return `<div class="result-item ${highlight ? 'highlight' : ''}">
+        <div class="label">${label}</div>
+        <div class="value">${val.toLocaleString()}<span class="unit">点</span></div>
+    </div>`;
+}
+// ========== Yaku Score (役种复合判定) ==========
+async function loadYakuCheckboxes() {
+    const el = document.getElementById('yaku-checkboxes');
+    if (el.dataset.loaded) return;
+    const res = await apiCall('/yaku_list');
+    if (!res.success) { alert('役种列表加载失败'); return; }
+    const groups = {};
+    res.yaku_list.forEach(y => {
+        const g = y.is_yakuman ? '役满' : (y.han + '番');
+        (groups[g] = groups[g] || []).push(y);
+    });
+    const order = ['1番', '2番', '3番', '5番', '6番', '役满'];
+    let html = '';
+    order.forEach(g => {
+        if (!groups[g]) return;
+        html += `<div class="yaku-group"><div class="yaku-group-title">${g}</div>`;
+        groups[g].forEach(y => {
+            html += `<label class="yaku-check"><input type="checkbox" value="${y.name}" onchange="onYakuToggle('${y.name}')"> ${y.name}</label>`;
+        });
+        html += `</div>`;
+    });
+    Object.keys(groups).forEach(g => {
+        if (order.includes(g)) return;
+        html += `<div class="yaku-group"><div class="yaku-group-title">${g}</div>`;
+        groups[g].forEach(y => {
+            html += `<label class="yaku-check"><input type="checkbox" value="${y.name}" onchange="onYakuToggle('${y.name}')"> ${y.name}</label>`;
+        });
+        html += `</div>`;
+    });
+    el.innerHTML = html;
+    el.dataset.loaded = '1';
+}
+
+function onYakuToggle(name) {
+    const fu = document.getElementById('yaku-fu');
+    if (name === '七对子') {
+        const checked = document.querySelector('input[value="七对子"]').checked;
+        fu.value = checked ? 25 : 20;
+        fu.disabled = checked;
+    }
+}
+
+function toggleGroup(groupId, btnId) {
+    document.querySelectorAll('#' + groupId + ' .toggle-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(btnId).classList.add('active');
+}
+
+async function submitYakuScore() {
+    const selected = [...document.querySelectorAll('#yaku-checkboxes input:checked')].map(c => c.value);
+    const dora = parseInt(document.getElementById('yaku-dora').value) || 0;
+    const ura = parseInt(document.getElementById('yaku-ura').value) || 0;
+    const fu = parseInt(document.getElementById('yaku-fu').value) || 20;
+    const is_dealer = document.getElementById('yaku-dealer').classList.contains('active');
+    const win_type = document.getElementById('yaku-tsumo').classList.contains('active') ? 'tsumo' : 'ron';
+    const is_menzen = !document.getElementById('yaku-fulou').classList.contains('active');
+    const ans = await apiCall('/yaku_score', { selected_yaku: selected, dora, ura_dora: ura, fu, is_dealer, is_menzen, win_type });
+    if (!ans.success) { alert('计算错误: ' + ans.error); return; }
+    const r = ans.result;
+
+    let stdHtml = '<div class="result-grid">';
+    if (win_type === 'ron') {
+        stdHtml += trainItem('放铳者支付', r.ron_payment);
+    } else if (is_dealer) {
+        stdHtml += trainItem('子家每人支付', r.child_payment);
+    } else {
+        stdHtml += trainItem('亲家支付', r.dealer_payment);
+        stdHtml += trainItem('子家每人支付', r.child_payment);
+    }
+    stdHtml += trainItem('总计获得', r.total, true);
+    stdHtml += '</div>';
+
+    const verdict = `<div class="result-header" style="border-color:var(--primary-light)"><div class="result-name" style="color:var(--primary-light)">${r.name}</div><div class="result-base">${selected.join('、') || '无役'}${(dora || ura) ? ' ＋宝牌' + (dora + ura) : ''}</div></div>`;
+
+    let desc = '<div class="desc-list">';
+    ans.descriptions.forEach(d => desc += `<p>▸ ${d}</p>`);
+    desc += '</div>';
+
+    const el = document.getElementById('yaku-score-result');
+    el.innerHTML = verdict + stdHtml + desc;
+    el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
+}
+</script>
+
+</body>
+</html>
