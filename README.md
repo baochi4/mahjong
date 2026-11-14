@@ -401,7 +401,7 @@ pip install -r requirements.txt
 python3 app.py
 
 # 访问浏览器
-# http://localhost:5000
+# http://localhost:5001  （macOS 控制中心默认占用 5000，已改用 5001）
 ```
 
 ### API 接口

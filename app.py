@@ -337,12 +337,12 @@ if __name__ == '__main__':
     except Exception:
         lan_ip = '127.0.0.1'
 
+    import os
+    port = int(os.environ.get('PORT', 5001))
+    debug = os.environ.get('DEBUG', '0') == '1'
     print("=" * 50)
     print("  日麻点数计算器 Web 服务")
-    print(f"  本机访问: http://localhost:5000")
-    print(f"  手机访问: http://{lan_ip}:5000  (需同一 WiFi)")
+    print(f"  本机访问: http://localhost:{port}")
+    print(f"  手机访问: http://{lan_ip}:{port}  (需同一 WiFi)")
     print("=" * 50)
-    import os
-    port = int(os.environ.get('PORT', 5000))
-    debug = os.environ.get('DEBUG', '0') == '1'
     app.run(host='0.0.0.0', port=port, debug=debug)
