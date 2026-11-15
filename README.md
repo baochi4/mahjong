@@ -466,7 +466,22 @@ python3 app.py
 ```
 > ⚠️ 响应中**不含任何答案/支付数值**，前端调用 `/api/calculate` 用相同参数自行计算标准答案用于校验，避免答案泄露。
 
-### 部署到云平台（手机 / iOS 不依赖电脑访问）
+### 离线使用（纯前端单文件，推荐，无需部署）
+
+> 不想部署任何云平台时，**首选本方案**：把核心逻辑用 JavaScript 重写并内联进单文件 `offline.html`，iOS Safari 直接打开即用，不依赖服务器、云或电脑开机。
+
+**文件**：`offline.html`（约 74KB 单文件，内置 `static/offline_engine.js` 的同一份逻辑，已用 Node 端到端验证与 Python 后端数值完全一致）。
+
+**iOS 使用步骤：**
+1. 把 `offline.html` 传到 iPhone（隔空投送 / 微信文件 / 邮件附件 / iCloud Drive 任选其一）。
+2. 在 iPhone 上用 **Safari** 打开该文件。
+3. 点底部「分享」按钮 → **添加到主屏幕**，即可像 App 一样常驻桌面，随时离线打开。
+
+**功能范围**：算点（手动番符）、役种算番（选役种 + 宝牌 + 门清/副露）、符数计算、顺位马、速查表、役种列表、训练出题——全部离线可用，与原 Flask 版功能一致。
+
+**维护说明**：`offline.html` 由 `build_offline.py` 从 `static/offline_engine.js` 自动生成（在 `<head>` 内联引擎并覆盖 `window.fetch` 拦截原 API 调用，前端 `index.html` 逻辑零改动）。若改了核心算法，重跑 `python3 build_offline.py` 重新生成即可。
+
+### 部署到云平台（备选：手机 / iOS 异网访问，需电脑或服务端常驻）
 
 项目已上线代码仓库：**https://github.com/baochi4/mahjong**（main 分支，部署配置齐全）。
 
